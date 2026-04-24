@@ -2,13 +2,16 @@
 <html>
 <head>
   <title>BridgeSign Model</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 </head>
 
 <body>
   <h2>BridgeSign Sign Detection</h2>
+
   <button onclick="init()">Start Camera</button>
+
   <div id="webcam-container"></div>
   <div id="label-container"></div>
 
@@ -18,22 +21,35 @@
     let model, webcam, labelContainer, maxPredictions;
 
     async function init() {
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
+      try {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
 
-      model = await tmImage.load(modelURL, metadataURL);
-      maxPredictions = model.getTotalClasses();
+        // Load model
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
 
-      webcam = new tmImage.Webcam(200, 200, true);
-      await webcam.setup();
-      await webcam.play();
-      window.requestAnimationFrame(loop);
+        // Setup webcam
+        webcam = new tmImage.Webcam(200, 200, true);
 
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
+        await webcam.setup();   // triggers camera permission
+        await webcam.play();
 
-      labelContainer = document.getElementById("label-container");
-      for (let i = 0; i < maxPredictions; i++) {
-        labelContainer.appendChild(document.createElement("div"));
+        window.requestAnimationFrame(loop);
+
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+        // Create label containers
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+
+        for (let i = 0; i < maxPredictions; i++) {
+          labelContainer.appendChild(document.createElement("div"));
+        }
+
+      } catch (err) {
+        console.log("ERROR:", err);
+        alert("Failed to start camera or load model:\n" + err);
       }
     }
 
@@ -56,10 +72,15 @@
         }
       }
 
-      if (highest > 0.85) {
-        if (window.AppInventor) {
-          window.AppInventor.setWebViewString(detected);
-        }
+      // Show on screen
+      labelContainer.innerHTML = `
+        <h3>Detected: ${detected}</h3>
+        <p>Confidence: ${highest.toFixed(2)}</p>
+      `;
+
+      // Send to MIT App Inventor
+      if (highest > 0.85 && window.AppInventor) {
+        window.AppInventor.setWebViewString(detected);
       }
     }
   </script>
